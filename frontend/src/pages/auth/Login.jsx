@@ -181,7 +181,7 @@ const Login = () => {
               borderColor: 'divider',
             }}
           >
-            {/* Mobile logo */}
+            {/* Mobile logohbhv */}
             {isMobile && (
               <Box sx={{ textAlign: 'center', mb: 4 }}>
                 <EventIcon 
