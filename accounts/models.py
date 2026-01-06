@@ -132,15 +132,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ['-date_joined']
     
     def __str__(self):
-        return f"{self.email} ({self.get_full_name()})"
+        return self.email
     
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
     
     def get_short_name(self):
         return self.first_name
-
-
+    
+    # Django admin requires these methods
+    def has_perm(self, perm, obj=None):
+        """Does the user have a specific permission?"""
+        return self.is_superuser
+    
+    def has_module_perms(self, app_label):
+        """Does the user have permissions to view the app `app_label`?"""
+        return self.is_superuser
+    
 class KYCVerification(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending Review'),
