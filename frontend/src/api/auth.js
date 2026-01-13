@@ -2,20 +2,63 @@ import axiosInstance from './axiosConfig';
 
 export const authAPI = {
   login: async (email, password) => {
-    const response = await axiosInstance.post('/auth/login/', { email, password });
-    const { access, refresh, user } = response.data;
-    
-    // Store tokens and user data
-    localStorage.setItem('access_token', access);
-    localStorage.setItem('refresh_token', refresh);
-    localStorage.setItem('user', JSON.stringify(user));
-    
-    return { access, refresh, user };
+    try {
+      const response = await axiosInstance.post('/auth/login/', { email, password });
+      
+      // Extract data from response - handle different response structures
+      const responseData = response.data;
+      
+      // Check for different response structures
+      let access, refresh, user;
+      
+      if (responseData.tokens) {
+        // Structure 1: { tokens: { access, refresh }, user: {...} }
+        access = responseData.tokens.access;
+        refresh = responseData.tokens.refresh;
+        user = responseData.user;
+      } else if (responseData.access && responseData.refresh) {
+        // Structure 2: { access, refresh, user: {...} }
+        access = responseData.access;
+        refresh = responseData.refresh;
+        user = responseData.user || responseData;
+      } else {
+        // Structure 3: Direct user data
+        access = responseData.access;
+        refresh = responseData.refresh;
+        user = responseData;
+      }
+      
+      // Store tokens and user data
+      if (access) {
+        localStorage.setItem('access_token', access);
+      }
+      if (refresh) {
+        localStorage.setItem('refresh_token', refresh);
+      }
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      
+      // Return consistent structure
+      return { 
+        access, 
+        refresh, 
+        user: user || responseData 
+      };
+    } catch (error) {
+      console.error('Login error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   register: async (userData) => {
-    const response = await axiosInstance.post('/auth/register/', userData);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/register/', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Register error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   logout: () => {
@@ -25,7 +68,46 @@ export const authAPI = {
   },
 
   getCurrentUser: async () => {
-    const response = await axiosInstance.get('/auth/user/');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/auth/profile/'); // Changed from '/auth/user/'
+      return response.data;
+    } catch (error) {
+      // If profile endpoint doesn't exist, try user endpoint
+      if (error.response?.status === 404) {
+        try {
+          const response = await axiosInstance.get('/auth/user/');
+          return response.data;
+        } catch (secondError) {
+          console.error('Get user error:', secondError.response?.data || secondError.message);
+          throw secondError;
+        }
+      }
+      console.error('Get profile error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // Optional: Add token refresh
+  refreshToken: async () => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+      
+      const response = await axiosInstance.post('/auth/token/refresh/', {
+        refresh: refreshToken
+      });
+      
+      const newAccessToken = response.data.access || response.data.tokens?.access;
+      if (newAccessToken) {
+        localStorage.setItem('access_token', newAccessToken);
+        return newAccessToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('Refresh token error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 };

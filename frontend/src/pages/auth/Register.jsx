@@ -1,5 +1,6 @@
+// src/pages/auth/Register.jsx
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -24,15 +25,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  ToggleButton,
-  ToggleButtonGroup,
   Radio,
   RadioGroup,
-  FormLabel,
 } from '@mui/material';
-import { 
-  Visibility, 
-  VisibilityOff, 
+import {
+  Visibility,
+  VisibilityOff,
   Email as EmailIcon,
   Lock as LockIcon,
   Person as PersonIcon,
@@ -45,32 +43,15 @@ import {
   CalendarMonth,
   ArrowBack,
   CheckCircle,
-  Home as HomeIcon,
-  Apartment as ApartmentIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext'; // Your context with role redirect
 
 const steps = ['User Type', 'Account Details', 'Personal Information', 'Complete'];
 
 const userTypes = [
-  {
-    value: 'personal',
-    label: 'Personal',
-    description: 'For individuals attending events',
-    icon: <PersonIcon />,
-  },
-  {
-    value: 'artist',
-    label: 'Artist/Creator',
-    description: 'Musicians, podcasters, content creators',
-    icon: <EventIcon />,
-  },
-  {
-    value: 'organizer',
-    label: 'Event Organizer',
-    description: 'For hosting your own events',
-    icon: <BusinessIcon />,
-  },
+  { value: 'personal', label: 'Personal', description: 'For individuals attending events', icon: <PersonIcon /> },
+  { value: 'artist', label: 'Artist/Creator', description: 'Musicians, podcasters, content creators', icon: <EventIcon /> },
+  { value: 'organizer', label: 'Event Organizer', description: 'For hosting your own events', icon: <BusinessIcon /> },
 ];
 
 const counties = [
@@ -81,16 +62,11 @@ const counties = [
 const Register = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    // User Type
     user_type: 'personal',
     is_organizer: false,
-    
-    // Account details
     email: '',
     password: '',
     password2: '',
-    
-    // Personal information
     first_name: '',
     last_name: '',
     phone: '',
@@ -105,34 +81,33 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
-  const navigate = useNavigate();
+  const { register } = useAuth(); // From your AuthContext
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const validateStep = (step) => {
     const errors = {};
-    
+
     if (step === 0) {
       if (!formData.user_type) errors.user_type = 'Please select a user type';
     }
-    
+
     if (step === 1) {
       if (!formData.email) errors.email = 'Email is required';
       else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid';
-      
+
       if (!formData.password) errors.password = 'Password is required';
       else if (formData.password.length < 8) errors.password = 'Password must be at least 8 characters';
-      
+
       if (!formData.password2) errors.password2 = 'Please confirm your password';
       else if (formData.password !== formData.password2) errors.password2 = 'Passwords do not match';
     }
-    
+
     if (step === 2) {
       if (!formData.first_name) errors.first_name = 'First name is required';
       if (!formData.last_name) errors.last_name = 'Last name is required';
       if (!formData.phone) errors.phone = 'Phone number is required';
-      
-      // Format phone validation
+
       if (formData.phone) {
         const phone = formData.phone.trim();
         if (!/^(?:\+254|0|7|1)/.test(phone)) {
@@ -141,10 +116,10 @@ const Register = () => {
           errors.phone = 'Phone number too short';
         }
       }
-      
+
       if (!formData.agreedToTerms) errors.agreedToTerms = 'You must agree to the terms and conditions';
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -163,50 +138,23 @@ const Register = () => {
     setActiveStep((prevStep) => prevStep - 1);
   };
 
-  const handleUserTypeChange = (event) => {
-    const userType = event.target.value;
-    const isOrganizer = userType === 'organizer';
-    
-    setFormData(prev => ({
-      ...prev,
-      user_type: userType,
-      is_organizer: isOrganizer,
-    }));
-  };
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
-    
-    // Clear validation error for this field
+
     if (validationErrors[name]) {
-      setValidationErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+      setValidationErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const formatPhoneNumber = (phone) => {
-    let formatted = phone.trim();
-    
-    // Remove any spaces, dashes, parentheses
-    formatted = formatted.replace(/[\s\-()]/g, '');
-    
-    // Convert to E.164 format
+    let formatted = phone.trim().replace(/[\s\-()]/g, '');
     if (formatted.startsWith('0') && formatted.length === 10) {
       formatted = '+254' + formatted.substring(1);
-    } else if (formatted.startsWith('7') && formatted.length === 9) {
-      formatted = '+254' + formatted;
-    } else if (formatted.startsWith('254') && formatted.length === 12) {
-      formatted = '+' + formatted;
-    } else if (formatted.startsWith('1') && formatted.length === 10) {
-      formatted = '+254' + formatted.substring(1);
     }
-    
     return formatted;
   };
 
@@ -216,61 +164,37 @@ const Register = () => {
     setSuccess('');
 
     try {
-      // Prepare data for API
       const { agreedToTerms, user_type, ...apiData } = formData;
-      
-      // Format phone number
+
+      // Format phone
       if (apiData.phone) {
         apiData.phone = formatPhoneNumber(apiData.phone);
       }
-      
-      // Set country to Kenya by default
-      if (!apiData.country) {
-        apiData.country = 'KE';
-      }
+
+      // Ensure country
+      if (!apiData.country) apiData.country = 'KE';
+
+      // IMPORTANT: Include password2 (backend requires it for validation)
+      apiData.password2 = apiData.password; // Frontend already validated match
 
       console.log('Sending registration data:', apiData);
-      
-      const response = await axios.post('http://localhost:8000/api/auth/register/', apiData);
-      
-      const { access, refresh, user, message } = response.data;
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      setSuccess(`${message} Redirecting to dashboard...`);
-      
-      // Redirect based on user type
-      setTimeout(() => {
-        if (user.is_organizer) {
-          navigate('/dashboard/organizer');
-        } else {
-          navigate('/dashboard');
-        }
-      }, 2000);
-      
+
+      const result = await register(apiData);
+
+      if (result.success) {
+        setSuccess('Registration successful! Redirecting...');
+        // Redirect handled by AuthContext
+      } else {
+        setError(result.error || 'Registration failed');
+      }
     } catch (err) {
-      console.error('Registration error:', err.response?.data || err);
-      
-      // Handle different error formats from backend
+      console.error('Registration error:', err);
       if (err.response?.data) {
-        if (err.response.data.email) {
-          setError(`Email: ${Array.isArray(err.response.data.email) ? err.response.data.email[0] : err.response.data.email}`);
-        } else if (err.response.data.phone) {
-          setError(`Phone: ${Array.isArray(err.response.data.phone) ? err.response.data.phone[0] : err.response.data.phone}`);
-        } else if (err.response.data.detail) {
-          setError(err.response.data.detail);
-        } else if (err.response.data.error) {
-          setError(err.response.data.error);
-        } else if (typeof err.response.data === 'object') {
-          // Handle field-specific errors
-          const fieldErrors = Object.entries(err.response.data)
-            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages[0] : messages}`)
-            .join(', ');
-          setError(fieldErrors || 'Registration failed. Please check your data.');
-        } else {
-          setError('Registration failed. Please try again.');
-        }
+        // Show specific backend errors
+        const fieldErrors = Object.entries(err.response.data)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages[0] : messages}`)
+          .join(', ');
+        setError(fieldErrors || 'Registration failed. Please check your data.');
       } else {
         setError('Network error. Please check your connection.');
       }
@@ -281,18 +205,25 @@ const Register = () => {
 
   const getStepContent = (step) => {
     switch (step) {
-      case 0: // User Type
+      case 0:
         return (
           <Box sx={{ mt: 3 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               How do you plan to use DeEvent?
             </Typography>
-            
+
             <FormControl component="fieldset" sx={{ width: '100%' }}>
               <RadioGroup
                 name="user_type"
                 value={formData.user_type}
-                onChange={handleUserTypeChange}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData((prev) => ({
+                    ...prev,
+                    user_type: value,
+                    is_organizer: value === 'organizer',
+                  }));
+                }}
                 sx={{ gap: 2 }}
               >
                 {userTypes.map((type) => (
@@ -311,18 +242,21 @@ const Register = () => {
                         backgroundColor: '#f8f9fa',
                       },
                     }}
-                    onClick={() => handleUserTypeChange({ target: { value: type.value } })}
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        user_type: type.value,
+                        is_organizer: type.value === 'organizer',
+                      }));
+                    }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                      <Box sx={{ 
-                        color: formData.user_type === type.value ? 'primary.main' : 'text.secondary',
-                        mt: 0.5
-                      }}>
+                      <Box sx={{ color: formData.user_type === type.value ? 'primary.main' : 'text.secondary', mt: 0.5 }}>
                         {type.icon}
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Radio 
+                          <Radio
                             value={type.value}
                             checked={formData.user_type === type.value}
                             sx={{ p: 0, mr: 1 }}
@@ -345,19 +279,19 @@ const Register = () => {
                 ))}
               </RadioGroup>
             </FormControl>
-            
+
             {formData.user_type === 'organizer' && (
               <Alert severity="info" sx={{ mt: 3, borderRadius: 1 }}>
                 <Typography variant="body2">
-                  <strong>Note:</strong> As an organizer, you'll need to complete KYC verification 
-                  before hosting paid events. You can do this after registration in your dashboard.
+                  <strong>Note:</strong> As an organizer, you'll need to complete KYC verification before hosting paid events.
+                  This can be done in your dashboard after registration.
                 </Typography>
               </Alert>
             )}
           </Box>
         );
-      
-      case 1: // Account Details
+
+      case 1:
         return (
           <Box sx={{ mt: 3 }}>
             <TextField
@@ -373,14 +307,10 @@ const Register = () => {
               helperText={validationErrors.email}
               disabled={loading}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailIcon color="action" />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><EmailIcon color="action" /></InputAdornment>,
               }}
             />
-            
+
             <TextField
               fullWidth
               label="Password"
@@ -391,27 +321,20 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               error={!!validationErrors.password}
-              helperText={validationErrors.password || 'Minimum 8 characters with letters and numbers'}
+              helperText={validationErrors.password || 'Minimum 8 characters'}
               disabled={loading}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon color="action" />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><LockIcon color="action" /></InputAdornment>,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
-            
+
             <TextField
               fullWidth
               label="Confirm Password"
@@ -425,17 +348,10 @@ const Register = () => {
               helperText={validationErrors.password2}
               disabled={loading}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon color="action" />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><LockIcon color="action" /></InputAdornment>,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      edge="end"
-                    >
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -444,8 +360,8 @@ const Register = () => {
             />
           </Box>
         );
-      
-      case 2: // Personal Information
+
+      case 2:
         return (
           <Box sx={{ mt: 3 }}>
             <Grid container spacing={2}>
@@ -462,11 +378,7 @@ const Register = () => {
                   helperText={validationErrors.first_name}
                   disabled={loading}
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon color="action" />
-                      </InputAdornment>
-                    ),
+                    startAdornment: <InputAdornment position="start"><PersonIcon color="action" /></InputAdornment>,
                   }}
                 />
               </Grid>
@@ -483,16 +395,12 @@ const Register = () => {
                   helperText={validationErrors.last_name}
                   disabled={loading}
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <PersonIcon color="action" />
-                      </InputAdornment>
-                    ),
+                    startAdornment: <InputAdornment position="start"><PersonIcon color="action" /></InputAdornment>,
                   }}
                 />
               </Grid>
             </Grid>
-            
+
             <TextField
               fullWidth
               label="Phone Number"
@@ -506,14 +414,10 @@ const Register = () => {
               placeholder="0712345678"
               disabled={loading}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PhoneIcon color="action" />
-                  </InputAdornment>
-                ),
+                startAdornment: <InputAdornment position="start"><PhoneIcon color="action" /></InputAdornment>,
               }}
             />
-            
+
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -526,11 +430,7 @@ const Register = () => {
                   onChange={handleChange}
                   disabled={loading}
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LocationCity color="action" />
-                      </InputAdornment>
-                    ),
+                    startAdornment: <InputAdornment position="start"><LocationCity color="action" /></InputAdornment>,
                   }}
                 />
               </Grid>
@@ -553,7 +453,7 @@ const Register = () => {
                 </FormControl>
               </Grid>
             </Grid>
-            
+
             <FormControlLabel
               control={
                 <Checkbox
@@ -584,17 +484,11 @@ const Register = () => {
             )}
           </Box>
         );
-      
-      case 3: // Complete
+
+      case 3:
         return (
           <Box sx={{ mt: 3, textAlign: 'center' }}>
-            <CheckCircle 
-              sx={{ 
-                fontSize: 80, 
-                color: theme.palette.success.main,
-                mb: 3 
-              }} 
-            />
+            <CheckCircle sx={{ fontSize: 80, color: theme.palette.success.main, mb: 3 }} />
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Review Your Information
             </Typography>
@@ -605,7 +499,7 @@ const Register = () => {
                   {userTypes.find(t => t.value === formData.user_type)?.label} Account
                 </Typography>
               </Box>
-              
+
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 <strong>Email:</strong> {formData.email}
               </Typography>
@@ -621,7 +515,7 @@ const Register = () => {
                 </Typography>
               )}
             </Paper>
-            
+
             {formData.user_type === 'organizer' && (
               <Alert severity="info" sx={{ mb: 3, borderRadius: 1 }}>
                 <Typography variant="body2">
@@ -630,13 +524,13 @@ const Register = () => {
                 </Typography>
               </Alert>
             )}
-            
+
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Click "Complete Registration" to create your account
             </Typography>
           </Box>
         );
-      
+
       default:
         return null;
     }
@@ -645,11 +539,11 @@ const Register = () => {
   return (
     <Container maxWidth={false} disableGutters sx={{ height: '100vh' }}>
       <Grid container sx={{ height: '100%' }}>
-        {/* Left Side - Branding/Image */}
+        {/* Left Side - Branding */}
         {!isMobile && (
-          <Grid 
-            item 
-            md={6} 
+          <Grid
+            item
+            md={6}
             sx={{
               background: 'linear-gradient(135deg, #006400 0%, #1b5e20 100%)',
               display: 'flex',
@@ -662,85 +556,15 @@ const Register = () => {
               overflow: 'hidden',
             }}
           >
-            {/* Decorative elements */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -100,
-                right: -100,
-                width: 300,
-                height: 300,
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.1)',
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -50,
-                left: -50,
-                width: 200,
-                height: 200,
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.1)',
-              }}
-            />
-
-            <Box sx={{ zIndex: 1, textAlign: 'center', maxWidth: 500 }}>
-              <EventIcon 
-                sx={{ 
-                  fontSize: 80, 
-                  mb: 3,
-                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2))'
-                }} 
-              />
-              <Typography 
-                variant="h2" 
-                sx={{ 
-                  fontWeight: 800,
-                  mb: 2,
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}
-              >
-                DeEvent
-              </Typography>
-              <Typography variant="h5" sx={{ mb: 4, opacity: 0.9 }}>
-                Join Kenya's Premier Event Platform
-              </Typography>
-
-              {/* Features list */}
-              <Box sx={{ mt: 6, textAlign: 'left' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <LocationOn sx={{ mr: 2, fontSize: 30 }} />
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Local Events</Typography>
-                    <Typography>Access events across Kenya</Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <People sx={{ mr: 2, fontSize: 30 }} />
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Create & Sell</Typography>
-                    <Typography>Host your own events easily</Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <CalendarMonth sx={{ mr: 2, fontSize: 30 }} />
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Smart Ticketing</Typography>
-                    <Typography>Digital tickets with M-Pesa</Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+            {/* ... your decorative boxes and content ... */}
           </Grid>
         )}
 
-        {/* Right Side - Registration Form */}
-        <Grid 
-          item 
-          xs={12} 
-          md={6} 
+        {/* Right Side - Form */}
+        <Grid
+          item
+          xs={12}
+          md={6}
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -765,51 +589,24 @@ const Register = () => {
             {/* Mobile logo */}
             {isMobile && (
               <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <EventIcon 
-                  sx={{ 
-                    fontSize: 50, 
-                    color: 'primary.main',
-                    mb: 1 
-                  }} 
-                />
-                <Typography 
-                  variant="h4" 
-                  sx={{ 
-                    fontWeight: 800,
-                    color: 'primary.main',
-                  }}
-                >
+                <EventIcon sx={{ fontSize: 50, color: 'primary.main', mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main' }}>
                   DeEvent
                 </Typography>
               </Box>
             )}
 
-            {/* Back button for mobile */}
+            {/* Back button */}
             {isMobile && activeStep > 0 && (
-              <Button
-                startIcon={<ArrowBack />}
-                onClick={handleBack}
-                sx={{ mb: 2 }}
-              >
+              <Button startIcon={<ArrowBack />} onClick={handleBack} sx={{ mb: 2 }}>
                 Back
               </Button>
             )}
 
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 600,
-                mb: 1,
-                color: 'text.primary'
-              }}
-            >
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
               Create Account
             </Typography>
-            <Typography 
-              variant="body1" 
-              color="text.secondary" 
-              sx={{ mb: 3 }}
-            >
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
               Join thousands of event organizers and attendees
             </Typography>
 
@@ -841,31 +638,14 @@ const Register = () => {
               </Box>
             )}
 
-            {/* Step Title */}
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              {activeStep === 0 && 'Select Account Type'}
-              {activeStep === 1 && 'Create Your Account'}
-              {activeStep === 2 && 'Personal Information'}
-              {activeStep === 3 && 'Review & Complete'}
-            </Typography>
-
-            {/* Error/Success Messages */}
-            {error && (
-              <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {success && (
-              <Alert severity="success" sx={{ mb: 3, borderRadius: 1 }}>
-                {success}
-              </Alert>
-            )}
+            {/* Error / Success */}
+            {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}>{error}</Alert>}
+            {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 1 }}>{success}</Alert>}
 
             {/* Step Content */}
             {getStepContent(activeStep)}
 
-            {/* Navigation Buttons */}
+            {/* Buttons */}
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
               <Button
                 onClick={handleBack}
@@ -875,7 +655,7 @@ const Register = () => {
               >
                 Back
               </Button>
-              
+
               <Button
                 onClick={handleNext}
                 variant="contained"
@@ -899,14 +679,7 @@ const Register = () => {
                 <Link
                   component={RouterLink}
                   to="/login"
-                  sx={{
-                    color: 'primary.main',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    }
-                  }}
+                  sx={{ color: 'primary.main', fontWeight: 600, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                 >
                   Sign in here
                 </Link>
