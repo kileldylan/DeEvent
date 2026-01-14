@@ -145,6 +145,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
     
+    def save(self, *args, **kwargs):
+        # Ensure last_login is timezone-aware
+        if self.last_login and timezone.is_naive(self.last_login):
+            self.last_login = timezone.make_aware(self.last_login)
+        super().save(*args, **kwargs)
+    
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
     
@@ -211,3 +217,55 @@ class KYCVerification(models.Model):
     
     def __str__(self):
         return f"KYC for {self.user.email}"
+    
+class UserActivityLog(models.Model):
+    """Audit trail for important user actions (login, role changes, etc.)"""
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='activity_logs'
+    )
+    action = models.CharField(max_length=100)  # e.g., "login", "role_change", "deactivated"
+    performed_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='performed_actions'
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    extra_data = models.JSONField(default=dict, blank=True)  # flexible metadata
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "User Activity Log"
+        verbose_name_plural = "User Activity Logs"
+
+    def __str__(self):
+        return f"{self.action} on {self.user.email} at {self.timestamp}"
+
+
+class UserNote(models.Model):
+    """Private notes from admins about a user"""
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='admin_notes'
+    )
+    note = models.TextField()
+    created_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_notes'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Note on {self.user.email} ({self.created_at.date()})"

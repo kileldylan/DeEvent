@@ -8,6 +8,7 @@ import {
   ListItemText,
   Divider,
   Box,
+  Typography,
   useTheme,
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';

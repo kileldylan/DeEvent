@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'accounts',
     'organizations',
     'core',
-]
+    'admin_panel',
+    ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware should be at the top

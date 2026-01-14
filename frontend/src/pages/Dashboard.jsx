@@ -2,14 +2,14 @@ import React from 'react';
 import { Container, Box, Typography, Button, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Logout as LogoutIcon } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+    logout();
   };
 
   return (

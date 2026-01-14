@@ -1,9 +1,17 @@
 # backend/apps/accounts/urls.py
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
+from . import admin_views
+from rest_framework.routers import DefaultRouter
+
+admin_router = DefaultRouter()
+admin_router.register(r'users', admin_views.AdminUserViewSet, basename='admin-user')
+admin_router.register(r'activity-logs', admin_views.AdminUserActivityLogViewSet, basename='admin-activity-log')
+admin_router.register(r'notes', admin_views.AdminUserNoteViewSet, basename='admin-note')
 
 urlpatterns = [
+    path('admin/', include(admin_router.urls)),
     # Authentication
     path('register/', views.RegisterView.as_view(), name='register'),
     path('login/', views.LoginView.as_view(), name='login'),

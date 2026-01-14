@@ -15,28 +15,34 @@ export const AuthProvider = ({ children }) => {
   // Initial auth check (safe, no redirect here)
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      const storedUser = localStorage.getItem('user');
+      try {
+        const token = localStorage.getItem('access_token');
+        const storedUser = localStorage.getItem('user');
 
-      if (token && storedUser) {
-        try {
-          // Try fresh fetch first
-          const freshUser = await authAPI.getCurrentUser();
-          console.log('Fresh user from /auth/profile/ or /auth/user/:', freshUser);
-          setUser(freshUser);
-          localStorage.setItem('user', JSON.stringify(freshUser));
-        } catch (err) {
-          console.warn('Fresh fetch failed, using stored:', err);
+        if (token && storedUser) {
           try {
-            const parsed = JSON.parse(storedUser);
-            setUser(parsed);
-          } catch (parseErr) {
-            console.error('Stored user invalid:', parseErr);
-            authAPI.logout();
+            // Try fresh fetch first
+            const freshUser = await authAPI.getCurrentUser();
+            console.log('Fresh user from /auth/profile/ or /auth/user/:', freshUser);
+            setUser(freshUser);
+            localStorage.setItem('user', JSON.stringify(freshUser));
+          } catch (err) {
+            console.warn('Fresh fetch failed, using stored:', err);
+            try {
+              const parsed = JSON.parse(storedUser);
+              setUser(parsed);
+            } catch (parseErr) {
+              console.error('Stored user invalid:', parseErr);
+              authAPI.logout();
+            }
           }
         }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        authAPI.logout();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
