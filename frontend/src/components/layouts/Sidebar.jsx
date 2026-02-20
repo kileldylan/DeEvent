@@ -79,10 +79,51 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
     { 
       text: 'Dashboard', 
       icon: <DashboardIcon />, 
+      path: '/admin-dashboard',
+      count: null,
+      show: true,
+      roles: ['admin'],
+    },
+    { 
+      text: 'Organizations', 
+      icon: <BusinessIcon />, 
+      path: '/admin/organizations',
+      count: null,
+      show: true,
+      roles: ['admin'],
+    },
+    { 
+      text: 'Users', 
+      icon: <PeopleIcon />, 
+      path: '/admin/users-management',
+      count: null,
+      show: true,
+      roles: ['admin'],
+    },
+    { 
+      text: 'Analytics', 
+      icon: <AssessmentIcon />, 
+      path: '/admin/analytics',
+      count: null,
+      show: true,
+      roles: ['admin'],
+    },
+    { 
+      text: 'Settings', 
+      icon: <SettingsIcon />, 
+      path: '/admin/settings',
+      count: null,
+      show: true,
+      roles: ['admin'],
+    },
+    // Organizer menu items
+    { 
+      text: 'Dashboard', 
+      icon: <DashboardIcon />, 
       path: '/organizer/dashboard',
       count: null,
       show: true,
-      roles: ['all'],
+      roles: ['organizer'],
     },
     { 
       text: 'Events', 
@@ -98,7 +139,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       path: '/organizer/organizations',
       count: organizations?.owned?.length + organizations?.member_of?.length || 0,
       show: true,
-      roles: ['organizer', 'admin'],
+      roles: ['organizer'],
     },
     { 
       text: 'Revenue', 
@@ -114,7 +155,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       path: '/organizer/analytics',
       count: null,
       show: true,
-      roles: ['organizer', 'admin'],
+      roles: ['organizer'],
     },
     { 
       text: 'Transactions', 
@@ -138,7 +179,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       path: '/organizer/calendar',
       count: null,
       show: true,
-      roles: ['organizer', 'admin'],
+      roles: ['organizer'],
     },
     { 
       text: 'Trends', 
@@ -146,7 +187,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       path: '/organizer/trends',
       count: null,
       show: true,
-      roles: ['organizer', 'admin'],
+      roles: ['organizer'],
     },
     { 
       text: 'Settings', 
@@ -154,7 +195,7 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
       path: '/organizer/settings',
       count: null,
       show: true,
-      roles: ['all'],
+      roles: ['organizer'],
     },
   ];
 
@@ -535,132 +576,48 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
               <CircularProgress size={20} />
             </Box>
           </MenuItem>
-        ) : (
-          <>
-            {/* Owned Organizations */}
-            {organizations?.owned?.length > 0 && (
-              <>
-                <MenuItem disabled sx={{ pt: 1 }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                    OWNED ORGANIZATIONS
-                  </Typography>
-                </MenuItem>
-                {organizations.owned.map((org) => (
-                  <MenuItem
-                    key={org.id}
-                    onClick={() => handleSelectOrganization(org)}
-                    selected={currentOrganization?.id === org.id}
-                    sx={{
-                      py: 1.5,
-                      borderRadius: 1,
-                      mx: 1,
-                      mb: 0.5,
-                      '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '&:hover': {
-                          bgcolor: 'primary.dark',
-                        },
+        ) : [
+            /* Owned Organizations */
+            organizations?.owned?.length > 0 && [
+              <MenuItem key="owned-header" disabled sx={{ pt: 1 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  OWNED ORGANIZATIONS
+                </Typography>
+              </MenuItem>,
+              ...organizations.owned.map((org) => (
+                <MenuItem
+                  key={org.id}
+                  onClick={() => handleSelectOrganization(org)}
+                  selected={currentOrganization?.id === org.id}
+                  sx={{
+                    py: 1.5,
+                    borderRadius: 1,
+                    mx: 1,
+                    mb: 0.5,
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
                       },
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
-                      <Avatar
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          bgcolor: currentOrganization?.id === org.id ? 'white' : 'primary.main',
-                          color: currentOrganization?.id === org.id ? 'primary.main' : 'white',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {org.name.charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Typography 
-                            variant="body2" 
-                            fontWeight={500}
-                            sx={{ 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {org.name}
-                          </Typography>
-                          {org.is_verified && (
-                            <VerifiedIcon sx={{ fontSize: 14, color: currentOrganization?.id === org.id ? 'white' : 'success.main' }} />
-                          )}
-                        </Box>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: currentOrganization?.id === org.id ? 'rgba(255,255,255,0.8)' : 'text.secondary',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {org.org_type === 'business' ? 'Business Account' : 'Personal Account'}
-                        </Typography>
-                      </Box>
-                      {currentOrganization?.id === org.id && (
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: 'white',
-                          }}
-                        />
-                      )}
-                    </Stack>
-                  </MenuItem>
-                ))}
-              </>
-            )}
-
-            {/* Member Of Organizations */}
-            {organizations?.member_of?.length > 0 && (
-              <>
-                <MenuItem disabled sx={{ pt: 2 }}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                    MEMBER OF
-                  </Typography>
-                </MenuItem>
-                {organizations.member_of.map((org) => (
-                  <MenuItem
-                    key={org.id}
-                    onClick={() => handleSelectOrganization(org)}
-                    selected={currentOrganization?.id === org.id}
-                    sx={{
-                      py: 1.5,
-                      borderRadius: 1,
-                      mx: 1,
-                      mb: 0.5,
-                      '&.Mui-selected': {
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                        '&:hover': {
-                          bgcolor: 'primary.dark',
-                        },
-                      },
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
-                      <Avatar
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          bgcolor: currentOrganization?.id === org.id ? 'white' : 'primary.light',
-                          color: currentOrganization?.id === org.id ? 'primary.main' : 'white',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {org.name.charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
+                    <Avatar
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        bgcolor: currentOrganization?.id === org.id ? 'white' : 'primary.main',
+                        color: currentOrganization?.id === org.id ? 'primary.main' : 'white',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {org.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Typography 
                           variant="body2" 
                           fontWeight={500}
@@ -671,34 +628,113 @@ const Sidebar = ({ open, onClose, variant = 'permanent' }) => {
                         >
                           {org.name}
                         </Typography>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: currentOrganization?.id === org.id ? 'rgba(255,255,255,0.8)' : 'text.secondary',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          Member • {org.owner_name || 'Team Member'}
-                        </Typography>
+                        {org.is_verified && (
+                          <VerifiedIcon sx={{ fontSize: 14, color: currentOrganization?.id === org.id ? 'white' : 'success.main' }} />
+                        )}
                       </Box>
-                      {currentOrganization?.id === org.id && (
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            bgcolor: 'white',
-                          }}
-                        />
-                      )}
-                    </Stack>
-                  </MenuItem>
-                ))}
-              </>
-            )}
-          </>
-        )}
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: currentOrganization?.id === org.id ? 'rgba(255,255,255,0.8)' : 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {org.org_type === 'business' ? 'Business Account' : 'Personal Account'}
+                      </Typography>
+                    </Box>
+                    {currentOrganization?.id === org.id && (
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: 'white',
+                        }}
+                      />
+                    )}
+                  </Stack>
+                </MenuItem>
+              )),
+            ],
+            
+            /* Member Of Organizations */
+            organizations?.member_of?.length > 0 && [
+              <MenuItem key="member-header" disabled sx={{ pt: 2 }}>
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  MEMBER OF
+                </Typography>
+              </MenuItem>,
+              ...organizations.member_of.map((org) => (
+                <MenuItem
+                  key={org.id}
+                  onClick={() => handleSelectOrganization(org)}
+                  selected={currentOrganization?.id === org.id}
+                  sx={{
+                    py: 1.5,
+                    borderRadius: 1,
+                    mx: 1,
+                    mb: 0.5,
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ width: '100%' }}>
+                    <Avatar
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        bgcolor: currentOrganization?.id === org.id ? 'white' : 'primary.light',
+                        color: currentOrganization?.id === org.id ? 'primary.main' : 'white',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {org.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={500}
+                        sx={{ 
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {org.name}
+                      </Typography>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: currentOrganization?.id === org.id ? 'rgba(255,255,255,0.8)' : 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        Member • {org.owner_name || 'Team Member'}
+                      </Typography>
+                    </Box>
+                    {currentOrganization?.id === org.id && (
+                      <Box
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: 'white',
+                        }}
+                      />
+                    )}
+                  </Stack>
+                </MenuItem>
+              )),
+            ],
+          ].flat().filter(Boolean)
+        }
 
         <Divider sx={{ my: 1 }} />
         

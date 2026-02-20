@@ -5,7 +5,6 @@ from .views import DashboardView, QuickStatsView, EventAnalyticsView
 
 router = DefaultRouter()
 router.register(r'organizations', views.OrganizationViewSet, basename='organization')
-router.register(r'admin/organizations', views.AdminOrganizationViewSet, basename='admin-organization')
 
 # Nested routes for organization members
 organizations_router = DefaultRouter()

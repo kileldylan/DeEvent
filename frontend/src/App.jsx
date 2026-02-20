@@ -4,10 +4,14 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Container, Box, Typography, Button } from '@mui/material';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdminProvider } from './contexts/AdminContext';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminOrganizations from './pages/admin/AdminOrganizations';
+import AdminUsersManagement from './pages/admin/AdminUsersManagement';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
 import OrganizerDashboard from './pages/organizations/Organizations';
 import AdminUsers from './pages/admin/AdminUsers';
 import OrganizationsDashboard from './pages/organizations/OrganizationsDashboard';
@@ -43,7 +47,8 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <OrganizationsProvider>
+        <AdminProvider>
+          <OrganizationsProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -64,10 +69,37 @@ const App = () => {
           } />
 
           <Route
+            path="/admin/organizations"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminOrganizations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users-management"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminUsersManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/users"
             element={
               <ProtectedRoute roles={['admin']}>
                 <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminAnalytics />
               </ProtectedRoute>
             }
           />
@@ -84,16 +116,16 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          {/* Support legacy organizer routes used by Sidebar */}
-          <Route path="/organizer/*" element={
-            <ProtectedRoute roles={['organizer']}>
-              <OrganizationsDashboard />
-            </ProtectedRoute>
-          } />
-          {/* Specific organizer pages */}
+          {/* Specific organizer pages (defined before wildcard) */}
           <Route path="/organizer/organizations" element={
             <ProtectedRoute roles={['organizer']}>
               <Organizations />
+            </ProtectedRoute>
+          } />
+          {/* Support legacy organizer routes used by Sidebar (catch-all) */}
+          <Route path="/organizer/*" element={
+            <ProtectedRoute roles={['organizer']}>
+              <OrganizationsDashboard />
             </ProtectedRoute>
           } />
           
@@ -117,7 +149,8 @@ const App = () => {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </OrganizationsProvider>
+          </OrganizationsProvider>
+        </AdminProvider>
       </AuthProvider>
     </Router>
   );
