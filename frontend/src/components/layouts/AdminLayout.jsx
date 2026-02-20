@@ -14,7 +14,7 @@ const AdminLayout = ({ children }) => {
   return (
     <Box sx={{ display: 'flex' }}>
       {/* Sidebar */}
-      <Box component="nav" sx={{ width: { md: 260 }, flexShrink: { md: 0 } }}>
+      <Box component="nav" sx={{ width: { md: 280 }, flexShrink: { md: 0 } }}>
         <Sidebar
           variant="temporary"
           open={mobileOpen}

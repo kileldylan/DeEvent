@@ -16,21 +16,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        const storedUser = localStorage.getItem('user');
+        const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
+        const storedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
 
         if (token && storedUser) {
           try {
             // Try fresh fetch first
             const freshUser = await authAPI.getCurrentUser();
             console.log('Fresh user from /auth/profile/ or /auth/user/:', freshUser);
-            setUser(freshUser);
-            localStorage.setItem('user', JSON.stringify(freshUser));
+            const normalized = normalizeUser(freshUser);
+            setUser(normalized);
+            sessionStorage.setItem('user', JSON.stringify(normalized));
           } catch (err) {
             console.warn('Fresh fetch failed, using stored:', err);
             try {
               const parsed = JSON.parse(storedUser);
-              setUser(parsed);
+              setUser(normalizeUser(parsed));
             } catch (parseErr) {
               console.error('Stored user invalid:', parseErr);
               authAPI.logout();
@@ -77,11 +78,30 @@ export const AuthProvider = ({ children }) => {
       navigate('/admin-dashboard');
     } else if (isOrganizer) {
       console.log('→ Organizations');
-      navigate('/organizations');
+      navigate('/org-dashboard');
     } else {
       console.log('→ Default /');
       navigate('/');
     }
+  };
+
+  // Normalize API user payload to consistent camelCase keys used across the app
+  const normalizeUser = (u) => {
+    if (!u) return null;
+    return {
+      id: u.id ?? u.user_id,
+      email: u.email,
+      firstName: u.first_name || u.firstName || u.given_name || u.first || '',
+      lastName: u.last_name || u.lastName || u.family_name || u.last || '',
+      fullName: u.full_name || u.fullName || `${u.first_name || u.firstName || ''} ${u.last_name || u.lastName || ''}`.trim(),
+      avatar: u.avatar || u.profile_picture || u.avatar_url || u.picture || u.image || null,
+      is_organizer: u.is_organizer ?? u.isOrganizer ?? false,
+      is_organizer_bool: u.is_organizer ?? u.isOrganizer ?? false,
+      is_staff: u.is_staff ?? u.isStaff ?? false,
+      is_superuser: u.is_superuser ?? u.isSuperuser ?? false,
+      is_verified: u.is_verified ?? u.isVerified ?? false,
+      raw: u,
+    };
   };
 
   const login = async (email, password) => {
@@ -90,8 +110,10 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login(email, password);
       const loggedInUser = response.user;
       console.log('Login response user:', loggedInUser);
-      setUser(loggedInUser);
-      redirectBasedOnRole(loggedInUser);
+      const normalized = normalizeUser(loggedInUser);
+      setUser(normalized);
+      sessionStorage.setItem('user', JSON.stringify(normalized));
+      redirectBasedOnRole(normalized);
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
@@ -111,8 +133,10 @@ export const AuthProvider = ({ children }) => {
       const loginResponse = await authAPI.login(userData.email, userData.password);
       const registeredUser = loginResponse.user;
       console.log('Register + auto-login user:', registeredUser);
-      setUser(registeredUser);
-      redirectBasedOnRole(registeredUser);
+      const normalized = normalizeUser(registeredUser);
+      setUser(normalized);
+      sessionStorage.setItem('user', JSON.stringify(normalized));
+      redirectBasedOnRole(normalized);
       return { success: true };
     } catch (error) {
       console.error('Register error:', error);

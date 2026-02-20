@@ -30,13 +30,13 @@ export const authAPI = {
       
       // Store tokens and user data
       if (access) {
-        localStorage.setItem('access_token', access);
+        sessionStorage.setItem('access_token', access);
       }
       if (refresh) {
-        localStorage.setItem('refresh_token', refresh);
+        sessionStorage.setItem('refresh_token', refresh);
       }
       if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
+        sessionStorage.setItem('user', JSON.stringify(user));
       }
       
       // Return consistent structure
@@ -62,9 +62,9 @@ export const authAPI = {
   },
 
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user');
   },
 
   getCurrentUser: async () => {
@@ -90,7 +90,7 @@ export const authAPI = {
   // Optional: Add token refresh
   refreshToken: async () => {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken = sessionStorage.getItem('refresh_token');
       if (!refreshToken) {
         throw new Error('No refresh token available');
       }
@@ -101,7 +101,7 @@ export const authAPI = {
       
       const newAccessToken = response.data.access || response.data.tokens?.access;
       if (newAccessToken) {
-        localStorage.setItem('access_token', newAccessToken);
+        sessionStorage.setItem('access_token', newAccessToken);
         return newAccessToken;
       }
       return null;

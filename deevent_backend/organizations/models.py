@@ -161,3 +161,221 @@ class OrganizationMember(models.Model):
             self.can_view_analytics = False
         
         super().save(*args, **kwargs)
+
+    # Add these models to your existing models.py
+
+class DashboardMetric(models.Model):
+    """Dashboard metrics for quick retrieval and caching"""
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='dashboard_metrics')
+    metric_type = models.CharField(max_length=100)  # 'total_revenue', 'active_events', etc.
+    value = models.JSONField()  # Can store different types of values
+    period = models.CharField(max_length=20, default='all')  # 'daily', 'weekly', 'monthly', 'all'
+    
+    calculated_at = models.DateTimeField(auto_now=True)
+    valid_until = models.DateTimeField()
+    
+    class Meta:
+        unique_together = ['organization', 'metric_type', 'period']
+        indexes = [
+            models.Index(fields=['organization', 'metric_type', 'valid_until']),
+        ]
+    
+    def __str__(self):
+        return f"{self.organization.name} - {self.metric_type} ({self.period})"
+
+
+class Event(models.Model):
+    """Event model with financial tracking"""
+    EVENT_TYPES = [
+        ('music', 'Music'),
+        ('gospel', 'Gospel Concert'),
+        ('koroga', 'Koroga Festival'),
+        ('nyama_choma', 'Nyama Choma Festival'),
+        ('comedy', 'Comedy Show'),
+        ('conference', 'Conference'),
+        ('workshop', 'Workshop'),
+        ('sports', 'Sports Event'),
+        ('wedding', 'Wedding'),
+        ('fundraiser', 'Fundraiser'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending', 'Pending Review'),
+        ('active', 'Active'),
+        ('live', 'Live Now'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='events')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    
+    # Financial tracking
+    total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_tickets_sold = models.PositiveIntegerField(default=0)
+    attendees_count = models.PositiveIntegerField(default=0)
+    
+    # Location
+    venue_name = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    county = models.CharField(max_length=100, blank=True)
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Timestamps
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'status']),
+            models.Index(fields=['start_date', 'end_date']),
+        ]
+    
+    def __str__(self):
+        return self.title
+    
+    @property
+    def is_live(self):
+        from django.utils import timezone
+        now = timezone.now()
+        if self.start_date and self.end_date:
+            return self.start_date <= now <= self.end_date
+        return False
+    
+    @property
+    def days_until(self):
+        from django.utils import timezone
+        if self.start_date and self.start_date > timezone.now():
+            delta = self.start_date - timezone.now()
+            return delta.days
+        return 0
+
+
+class Transaction(models.Model):
+    """Financial transactions for events"""
+    TRANSACTION_TYPES = [
+        ('ticket_purchase', 'Ticket Purchase'),
+        ('refund', 'Refund'),
+        ('payout', 'Payout to Organizer'),
+        ('withdrawal', 'Withdrawal'),
+        ('commission', 'Platform Commission'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    PAYMENT_METHODS = [
+        ('mpesa', 'M-Pesa'),
+        ('card', 'Credit/Debit Card'),
+        ('bank', 'Bank Transfer'),
+        ('cash', 'Cash'),
+        ('other', 'Other'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='transactions')
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
+    
+    # Transaction details
+    transaction_id = models.CharField(max_length=50, unique=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    transaction_type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='mpesa')
+    
+    # Metadata
+    description = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organization', 'transaction_type', 'created_at']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.transaction_id} - {self.amount}"
+    
+    def save(self, *args, **kwargs):
+        if not self.transaction_id:
+            from django.utils import timezone
+            date_str = timezone.now().strftime('%Y%m%d')
+            last_tx = Transaction.objects.filter(
+                transaction_id__startswith=f"TX-{date_str}-"
+            ).order_by('transaction_id').last()
+            
+            if last_tx:
+                last_num = int(last_tx.transaction_id.split('-')[-1])
+                new_num = last_num + 1
+            else:
+                new_num = 1
+            
+            self.transaction_id = f"TX-{date_str}-{new_num:05d}"
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_income(self):
+        return self.transaction_type == 'ticket_purchase'
+    
+    @property
+    def is_expense(self):
+        return self.transaction_type in ['refund', 'payout', 'withdrawal', 'commission']
+
+
+class TicketType(models.Model):
+    """Ticket types for events"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='ticket_types')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    # Pricing
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='KES')
+    
+    # Quantity
+    quantity = models.PositiveIntegerField()
+    sold_count = models.PositiveIntegerField(default=0)
+    
+    # Timing
+    sale_start = models.DateTimeField(null=True, blank=True)
+    sale_end = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['price']
+    
+    def __str__(self):
+        return f"{self.name} - {self.event.title}"
+    
+    @property
+    def available_quantity(self):
+        return self.quantity - self.sold_count
+    
+    @property
+    def revenue(self):
+        return self.price * self.sold_count

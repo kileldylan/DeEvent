@@ -10,6 +10,9 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import OrganizerDashboard from './pages/organizations/Organizations';
 import AdminUsers from './pages/admin/AdminUsers';
+import OrganizationsDashboard from './pages/organizations/OrganizationsDashboard';
+import Organizations from './pages/organizations/Organizations';
+import { OrganizationsProvider } from './contexts/OrganizationsContext';
 
 // Protected Route Component
   const ProtectedRoute = ({ children, roles = [] }) => {
@@ -40,6 +43,7 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
+        <OrganizationsProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -48,7 +52,7 @@ const App = () => {
           {/* Protected Routes */}
           <Route path="/" element={
             <ProtectedRoute>
-              <Dashboard />
+              <OrganizationsDashboard />
             </ProtectedRoute>
           } />
           
@@ -73,6 +77,25 @@ const App = () => {
               <OrganizerDashboard />
             </ProtectedRoute>
           } />
+
+          <Route path="/org-dashboard" element={
+            <ProtectedRoute roles={['organizer']}>
+              <OrganizationsDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Support legacy organizer routes used by Sidebar */}
+          <Route path="/organizer/*" element={
+            <ProtectedRoute roles={['organizer']}>
+              <OrganizationsDashboard />
+            </ProtectedRoute>
+          } />
+          {/* Specific organizer pages */}
+          <Route path="/organizer/organizations" element={
+            <ProtectedRoute roles={['organizer']}>
+              <Organizations />
+            </ProtectedRoute>
+          } />
           
           {/* Unauthorized route */}
           <Route path="/unauthorized" element={
@@ -94,6 +117,7 @@ const App = () => {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </OrganizationsProvider>
       </AuthProvider>
     </Router>
   );

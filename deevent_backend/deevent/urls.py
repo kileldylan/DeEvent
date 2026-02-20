@@ -31,7 +31,7 @@ urlpatterns = [
     
     # API Endpoints
     path('api/v1/auth/', include('accounts.urls')),
-    path('api/v1/', include('organizations.urls')),
+    path('api/v1/org/', include('organizations.urls')),
     path('api/v1/admin/', include('admin_panel.urls')),
 
     

@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from .views import DashboardView, QuickStatsView, EventAnalyticsView
 
 router = DefaultRouter()
 router.register(r'organizations', views.OrganizationViewSet, basename='organization')
@@ -15,7 +16,10 @@ urlpatterns = [
     path('organizations/<uuid:organization_pk>/', include(organizations_router.urls)),
     
     # Additional custom endpoints
-    path('organizations/my-organizations/', 
+    path('my-organizations/', 
          views.OrganizationViewSet.as_view({'get': 'my_organizations'}), 
          name='my-organizations'),
+    path('dashboard/', DashboardView.as_view(), name='organizations-dashboard'),
+    path('quick-stats/', QuickStatsView.as_view(), name='organizations-quick-stats'),
+    path('events/<uuid:pk>/analytics/', EventAnalyticsView.as_view(), name='event-analytics'),
 ]

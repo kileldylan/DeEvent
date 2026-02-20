@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
 // Add token to all requests
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token') || localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,7 +30,7 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        const refreshToken = sessionStorage.getItem('refresh_token') || localStorage.getItem('refresh_token');
         if (refreshToken) {
           const response = await axios.post(
             'http://localhost:8000/api/v1/auth/token/refresh/',
@@ -38,14 +38,14 @@ axiosInstance.interceptors.response.use(
           );
           
           const { access } = response.data;
-          localStorage.setItem('access_token', access);
+          sessionStorage.setItem('access_token', access);
           
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
         // Clear storage and redirect to login
-        localStorage.clear();
+          sessionStorage.clear();
         window.location.href = '/login';
       }
     }
